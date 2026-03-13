@@ -6,6 +6,7 @@ from helpers.shortener_api import shorten_url
 
 batch_sessions = {}
 
+
 @Client.on_message(filters.command("batch") & filters.private)
 async def batch_cmd(client, message):
     uid = message.from_user.id
@@ -13,6 +14,7 @@ async def batch_cmd(client, message):
         return await message.reply("Already in batch mode. /endbatch or /cancelbatch")
     batch_sessions[uid] = {"files": [], "active": True}
     await message.reply("Batch started! Send files, then /endbatch")
+
 
 @Client.on_message(filters.command("endbatch") & filters.private)
 async def end_batch(client, message):
@@ -27,7 +29,13 @@ async def end_batch(client, message):
     bl = await LinkGenerator.generate_batch_link(buuid)
     bls = await shorten_url(bl, uid)
     del batch_sessions[uid]
-    await message.reply(f"**Batch Created!**\nFiles: {len(files)}\nLink: `{bls}`", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Share", url=bl)]]))
+    await message.reply(
+        f"**Batch Created!**\nFiles: {len(files)}\nLink: `{bls}`",
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Share", url=bl)]]
+        )
+    )
+
 
 @Client.on_message(filters.command("cancelbatch") & filters.private)
 async def cancel_batch(client, message):
@@ -35,6 +43,7 @@ async def cancel_batch(client, message):
     if uid in batch_sessions:
         del batch_sessions[uid]
     await message.reply("Batch cancelled.")
+
 
 async def check_batch_mode(client, message, file_uuid):
     uid = message.from_user.id
