@@ -1,4 +1,5 @@
 import os
+import asyncio
 import logging
 import jinja2
 import aiohttp_jinja2
@@ -12,6 +13,9 @@ from helpers.file_properties import get_human_size
 logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
+# Number of 1MB chunks to prefetch ahead of what's being sent
+PREFETCH_CHUNKS = 3
 
 
 class StreamServer:
@@ -140,7 +144,36 @@ class StreamServer:
     async def download_file(self, request):
         return await self._serve(request, request.match_info["token"], inline=False)
 
-    # ─── Core File Server with Proper Range Support ───
+    # ─── Prefetch producer: fills queue ahead of time ───
+    async def _prefetch_chunks(self, queue, msg, first_chunk, skip_bytes, bytes_to_send):
+        try:
+            bytes_queued = 0
+            is_first = True
+            async for chunk in self.bot.stream_media(msg, offset=first_chunk):
+                # Trim leading bytes in first chunk
+                if is_first and skip_bytes:
+                    chunk = chunk[skip_bytes:]
+                    is_first = False
+
+                # Trim if chunk exceeds total needed bytes
+                remaining = bytes_to_send - bytes_queued
+                if len(chunk) > remaining:
+                    chunk = chunk[:remaining]
+
+                if chunk:
+                    await queue.put(chunk)
+                    bytes_queued += len(chunk)
+
+                if bytes_queued >= bytes_to_send:
+                    break
+
+        except Exception as e:
+            logger.error(f"Prefetch error: {e}")
+        finally:
+            # Signal consumer that production is done
+            await queue.put(None)
+
+    # ─── Core File Server with Prefetch Buffer ───
     async def _serve(self, request, token, inline):
         file_data = await self._get_file_data(token)
         if not file_data:
@@ -198,37 +231,45 @@ class StreamServer:
                 logger.error(f"Message not found: {fd['message_id']}")
                 return resp
 
-            # Convert byte offset to 1MB chunk number (Telegram expects chunk index, not bytes)
+            # Convert byte offset → 1MB chunk index
             chunk_size = 1024 * 1024
-            first_chunk = offset // chunk_size   # chunk index to start streaming from
-            skip_bytes = offset % chunk_size     # bytes to skip at the start of first chunk
+            first_chunk = offset // chunk_size
+            skip_bytes = offset % chunk_size
 
+            # Queue holds up to PREFETCH_CHUNKS chunks ready to send
+            queue = asyncio.Queue(maxsize=PREFETCH_CHUNKS)
+
+            # Start prefetch producer in background
+            producer = asyncio.create_task(
+                self._prefetch_chunks(queue, msg, first_chunk, skip_bytes, content_length)
+            )
+
+            # Consumer: send chunks to client as they become available
             bytes_sent = 0
-            bytes_to_send = content_length
-            is_first_chunk = True
+            try:
+                while bytes_sent < content_length:
+                    chunk = await queue.get()
 
-            async for chunk in self.bot.stream_media(msg, offset=first_chunk):
-                if bytes_sent >= bytes_to_send:
-                    break
+                    # None signals end of stream from producer
+                    if chunk is None:
+                        break
 
-                # Discard leading bytes in first chunk that are before the requested offset
-                if is_first_chunk and skip_bytes:
-                    chunk = chunk[skip_bytes:]
-                    is_first_chunk = False
-
-                # Trim last chunk if it exceeds the requested byte range
-                remaining = bytes_to_send - bytes_sent
-                if len(chunk) > remaining:
-                    chunk = chunk[:remaining]
-
-                try:
-                    await resp.write(chunk)
-                    bytes_sent += len(chunk)
-                except ConnectionResetError:
-                    logger.info(f"Client disconnected: {fname}")
-                    break
-                except Exception:
-                    break
+                    try:
+                        await resp.write(chunk)
+                        bytes_sent += len(chunk)
+                    except ConnectionResetError:
+                        logger.info(f"Client disconnected: {fname}")
+                        break
+                    except Exception:
+                        break
+            finally:
+                # Always cancel producer if consumer exits early (seek, close tab, etc.)
+                if not producer.done():
+                    producer.cancel()
+                    try:
+                        await producer
+                    except asyncio.CancelledError:
+                        pass
 
         except Exception as e:
             logger.error(f"Stream error: {e}")
