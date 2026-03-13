@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ file_name }} — Stream</title>
+    <meta property="og:title" content="{{ file_name }}">
+    <meta property="og:type" content="video.other">
+    <meta property="og:description" content="Stream {{ file_name }} | Size: {{ file_size }}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            width: 100%;
+            padding: 15px 24px;
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .brand .logo { font-size: 24px; }
+
+        .brand h1 {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav { display: flex; gap: 10px; }
+
+        .nav-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn.home {
+            background: rgba(99, 102, 241, 0.12);
+            color: #8b8cf8;
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
+
+        .nav-btn.home:hover { background: rgba(99, 102, 241, 0.25); }
+
+        .nav-btn.dl {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+        }
+
+        .nav-btn.dl:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .main { width: 100%; max-width: 960px; padding: 24px 16px; flex: 1; }
+
+        .player-card {
+            background: rgba(20, 20, 50, 0.8);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+        }
+
+        .player-area { background: #000; position: relative; }
+
+        .player-area video {
+            width: 100%;
+            max-height: 540px;
+            display: block;
+            outline: none;
+        }
+
+        .audio-wrapper {
+            padding: 50px 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a1a3e, #2d1b69);
+        }
+
+        .audio-icon {
+            font-size: 72px;
+            margin-bottom: 16px;
+            display: block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        .audio-wrapper audio {
+            width: 100%;
+            max-width: 480px;
+            margin-top: 16px;
+            outline: none;
+        }
+
+        .audio-wrapper h3 { color: #fff; font-size: 16px; margin-bottom: 6px; }
+        .audio-wrapper p { color: #a0a0c0; font-size: 13px; }
+
+        .image-wrapper {
+            text-align: center;
+            background: #111;
+            padding: 20px;
+        }
+
+        .image-wrapper img {
+            max-width: 100%;
+            max-height: 600px;
+            border-radius: 8px;
+        }
+
+        .nopreview-wrapper {
+            padding: 60px 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #1a1a3e, #2d1b69);
+        }
+
+        .nopreview-wrapper .icon { font-size: 72px; margin-bottom: 16px; }
+        .nopreview-wrapper h3 { color: #fff; font-size: 18px; margin-bottom: 8px; }
+        .nopreview-wrapper p { color: #a0a0c0; font-size: 14px; }
+
+        .file-info { padding: 20px; }
+
+        .file-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 14px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+        }
+
+        .info-item {
+            background: rgba(99, 102, 241, 0.06);
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-item .ic {
+            font-size: 18px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(99, 102, 241, 0.12);
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .info-item .lbl {
+            font-size: 10px;
+            color: #6a6a90;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-item .val {
+            font-size: 13px;
+            color: #e0e0f0;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .act-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 13px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .act-btn.primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            box-shadow: 0 4px 18px rgba(99, 102, 241, 0.3);
+        }
+
+        .act-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
+        }
+
+        .act-btn.secondary {
+            background: rgba(99, 102, 241, 0.1);
+            color: #8b8cf8;
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
+
+        .act-btn.secondary:hover { background: rgba(99, 102, 241, 0.22); }
+
+        .act-btn.copy {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .act-btn.copy:hover { background: rgba(16, 185, 129, 0.22); }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(16, 185, 129, 0.95);
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .footer {
+            width: 100%;
+            padding: 16px;
+            text-align: center;
+            color: #4a4a70;
+            font-size: 12px;
+            border-top: 1px solid rgba(99, 102, 241, 0.08);
+        }
+
+        .footer a { color: #6366f1; text-decoration: none; }
+
+        @media (max-width: 640px) {
+            .header { padding: 12px 14px; }
+            .brand h1 { font-size: 14px; }
+            .nav-btn { padding: 6px 10px; font-size: 12px; }
+            .main { padding: 14px 10px; }
+            .file-title { font-size: 15px; }
+            .info-grid { grid-template-columns: 1fr; }
+            .actions { flex-direction: column; }
+            .act-btn { min-width: unset; }
+            .audio-wrapper { padding: 30px 16px; }
+            .audio-icon { font-size: 56px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="brand">
+            <span class="logo">🚀</span>
+            <h1>FileToLink Bot</h1>
+        </a>
+        <div class="nav">
+            <a href="/" class="nav-btn home">🏠 Home</a>
+            <a href="/download/{{ token }}" class="nav-btn dl">⬇️ Download</a>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="player-card">
+            <div class="player-area">
+                {% if player_type == "video" %}
+                <video controls autoplay preload="metadata">
+                    <source src="{{ stream_url }}" type="{{ mime_type }}">
+                    Your browser does not support video playback.
+                </video>
+
+                {% elif player_type == "audio" %}
+                <div class="audio-wrapper">
+                    <span class="audio-icon">🎵</span>
+                    <h3>Now Playing</h3>
+                    <p>{{ file_name }}</p>
+                    <audio controls autoplay preload="metadata">
+                        <source src="{{ stream_url }}" type="{{ mime_type }}">
+                    </audio>
+                </div>
+
+                {% elif player_type == "image" %}
+                <div class="image-wrapper">
+                    <img src="{{ stream_url }}" alt="{{ file_name }}" loading="lazy">
+                </div>
+
+                {% else %}
+                <div class="nopreview-wrapper">
+                    <div class="icon">📄</div>
+                    <h3>Preview Not Available</h3>
+                    <p>This file type cannot be previewed. Download it instead.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="file-info">
+                <div class="file-title">📁 {{ file_name }}</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="ic">💾</div>
+                        <div>
+                            <div class="lbl">Size</div>
+                            <div class="val">{{ file_size }}</div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="ic">📝</div>
+                        <div>
+                            <div class="lbl">Type</div>
+                            <div class="val">{{ mime_type }}</div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="ic">📂</div>
+                        <div>
+                            <div class="lbl">Category</div>
+                            <div class="val">{{ file_type }}</div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="ic">👁️</div>
+                        <div>
+                            <div class="lbl">Views</div>
+                            <div class="val">{{ access_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="/download/{{ token }}" class="act-btn primary">
+                <span>⬇️</span> Download
+            </a>
+            <a href="{{ stream_url }}" class="act-btn secondary" target="_blank">
+                <span>🔗</span> Direct Link
+            </a>
+            <button class="act-btn copy" onclick="copyLink()">
+                <span>📋</span> Copy Link
+            </button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">✅ Link copied!</div>
+
+    <div class="footer">
+        <p>⚡ <a href="https://t.me/{{ bot_username }}" target="_blank">FileToLink Bot</a> — Fast & Free</p>
+    </div>
+
+    <script>
+        function copyLink() {
+            var url = window.location.origin + "{{ stream_url }}";
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(function() { showToast(); });
+            } else {
+                var t = document.createElement("textarea");
+                t.value = url;
+                t.style.position = "fixed";
+                t.style.opacity = "0";
+                document.body.appendChild(t);
+                t.select();
+                document.execCommand("copy");
+                document.body.removeChild(t);
+                showToast();
+            }
+        }
+
+        function showToast() {
+            var el = document.getElementById("toast");
+            el.classList.add("show");
+            setTimeout(function() { el.classList.remove("show"); }, 2000);
+        }
+    </script>
+</body>
+</html>
