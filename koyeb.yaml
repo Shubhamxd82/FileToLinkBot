@@ -17,5 +17,9 @@ definition:
     - path: /health
       port: 8080
       protocol: http
+      interval_seconds: 30
+      timeout_seconds: 10
+      healthy_threshold: 2
+      unhealthy_threshold: 3
   docker:
     dockerfile: Dockerfile
