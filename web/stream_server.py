@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
-CHUNK_SIZE = 1024 * 1024  # 1MB chunks
-
 
 class StreamServer:
     def __init__(self, bot: Client):
@@ -34,43 +32,6 @@ class StreamServer:
         self.app.router.add_get("/dl/{token}", self.download_file)
         self.app.router.add_get("/watch/{token}", self.watch_page)
         self.app.router.add_get("/download/{token}", self.download_page)
-
-    # ─── Helper: Get file data from token ───
-    async def _get_file_data(self, token):
-        fuuid = LinkGenerator.decode_file_uuid(token)
-        if not fuuid:
-            return None
-        fd = await get_file(fuuid)
-        if not fd:
-            return None
-        return fd, fuuid
-
-    # ─── Helper: Get emoji for file type ───
-    @staticmethod
-    def _get_file_emoji(mime_type, file_type):
-        emoji_map = {
-            "video": "🎬", "audio": "🎵", "photo": "🖼️",
-            "animation": "🎞️", "sticker": "🎨", "voice": "🎤",
-            "video_note": "📹"
-        }
-        if file_type in emoji_map:
-            return emoji_map[file_type]
-        if mime_type:
-            if mime_type.startswith("video"):
-                return "🎬"
-            elif mime_type.startswith("audio"):
-                return "🎵"
-            elif mime_type.startswith("image"):
-                return "🖼️"
-            elif "pdf" in mime_type:
-                return "📕"
-            elif any(x in mime_type for x in ["zip", "rar", "7z", "tar", "gzip"]):
-                return "🗜️"
-            elif "android" in mime_type:
-                return "📱"
-            elif mime_type.startswith("text"):
-                return "📝"
-        return "📄"
 
     # ─── Landing Page ───
     async def home(self, request):
@@ -111,6 +72,7 @@ class StreamServer:
         context = {
             "file_name": fd.get("file_name", "Unknown"),
             "file_size": get_human_size(fd.get("file_size", 0)),
+            "file_size_bytes": fd.get("file_size", 0),
             "file_type": file_type,
             "player_type": player_type,
             "mime_type": mime_type,
@@ -153,6 +115,7 @@ class StreamServer:
         context = {
             "file_name": file_name,
             "file_size": get_human_size(fd.get("file_size", 0)),
+            "file_size_bytes": fd.get("file_size", 0),
             "file_type": file_type,
             "mime_type": mime_type,
             "file_extension": file_extension,
@@ -177,7 +140,7 @@ class StreamServer:
     async def download_file(self, request):
         return await self._serve(request, request.match_info["token"], inline=False)
 
-    # ─── Core File Server with Range Support ───
+    # ─── Core File Server with Proper Range Support ───
     async def _serve(self, request, token, inline):
         file_data = await self._get_file_data(token)
         if not file_data:
@@ -217,6 +180,7 @@ class StreamServer:
             "Content-Type": mime,
             "Accept-Ranges": "bytes",
             "Content-Length": str(content_length),
+            "Cache-Control": "public, max-age=3600",
         }
 
         if status == 206:
@@ -224,9 +188,6 @@ class StreamServer:
 
         disp = "inline" if inline else "attachment"
         headers["Content-Disposition"] = f'{disp}; filename="{fname}"'
-
-        # Cache headers for better streaming
-        headers["Cache-Control"] = "public, max-age=3600"
 
         resp = web.StreamResponse(status=status, headers=headers)
         await resp.prepare(request)
@@ -237,7 +198,6 @@ class StreamServer:
                 logger.error(f"Message not found: {fd['message_id']}")
                 return resp
 
-            # Stream with proper byte tracking
             bytes_sent = 0
             bytes_to_send = content_length
 
@@ -245,7 +205,7 @@ class StreamServer:
                 if bytes_sent >= bytes_to_send:
                     break
 
-                # Trim last chunk if needed
+                # Trim last chunk if it exceeds needed bytes
                 remaining = bytes_to_send - bytes_sent
                 if len(chunk) > remaining:
                     chunk = chunk[:remaining]
@@ -254,6 +214,7 @@ class StreamServer:
                     await resp.write(chunk)
                     bytes_sent += len(chunk)
                 except ConnectionResetError:
+                    logger.info(f"Client disconnected: {fname}")
                     break
                 except Exception:
                     break
@@ -268,14 +229,51 @@ class StreamServer:
 
         return resp
 
+    # ─── Helper: Get file data from token ───
+    async def _get_file_data(self, token):
+        fuuid = LinkGenerator.decode_file_uuid(token)
+        if not fuuid:
+            return None
+        fd = await get_file(fuuid)
+        if not fd:
+            return None
+        return fd, fuuid
+
+    # ─── Helper: Get emoji for file type ───
+    @staticmethod
+    def _get_file_emoji(mime_type, file_type):
+        emoji_map = {
+            "video": "🎬",
+            "audio": "🎵",
+            "photo": "🖼️",
+            "animation": "🎞️",
+            "sticker": "🎨",
+            "voice": "🎤",
+            "video_note": "📹",
+        }
+        if file_type in emoji_map:
+            return emoji_map[file_type]
+        if mime_type:
+            if mime_type.startswith("video"):
+                return "🎬"
+            elif mime_type.startswith("audio"):
+                return "🎵"
+            elif mime_type.startswith("image"):
+                return "🖼️"
+            elif "pdf" in mime_type:
+                return "📕"
+            elif any(x in mime_type for x in ["zip", "rar", "7z", "tar", "gzip"]):
+                return "🗜️"
+            elif "android" in mime_type:
+                return "📱"
+            elif mime_type.startswith("text"):
+                return "📝"
+        return "📄"
+
     # ─── Start Server ───
     async def start(self):
         runner = web.AppRunner(self.app)
         await runner.setup()
-        site = web.TCPSite(
-            runner,
-            Config.WEB_SERVER_BIND,
-            Config.WEB_SERVER_PORT
-        )
+        site = web.TCPSite(runner, Config.WEB_SERVER_BIND, Config.WEB_SERVER_PORT)
         await site.start()
         logger.info(f"Stream server started on port {Config.WEB_SERVER_PORT}")
