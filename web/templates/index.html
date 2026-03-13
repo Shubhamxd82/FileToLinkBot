@@ -1,1 +1,283 @@
-<!DOCTYPE html><html><body><h1>FileToLink Bot</h1></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileToLink Bot — Fast File Sharing</title>
+    <meta name="description" content="Convert Telegram files to direct download & stream links instantly.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .header-brand .logo { font-size: 32px; }
+
+        .header-brand h1 {
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .header-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .hero-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .hero h2 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff, #c7d2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: #8a8ab0;
+            max-width: 500px;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card .icon { font-size: 36px; margin-bottom: 12px; }
+
+        .feature-card h3 {
+            font-size: 16px;
+            color: #e0e0f0;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            color: #7a7aa0;
+            line-height: 1.5;
+        }
+
+        .cta-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+        .cta-btn {
+            padding: 14px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cta-btn.primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            box-shadow: 0 6px 25px rgba(99, 102, 241, 0.35);
+        }
+
+        .cta-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.5);
+        }
+
+        .cta-btn.secondary {
+            background: rgba(99, 102, 241, 0.12);
+            color: #8b8cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .cta-btn.secondary:hover {
+            background: rgba(99, 102, 241, 0.25);
+        }
+
+        .status-bar {
+            padding: 16px;
+            text-align: center;
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .status-bar span {
+            font-size: 13px;
+            color: #5a5a80;
+        }
+
+        .footer {
+            padding: 20px;
+            text-align: center;
+            color: #4a4a70;
+            font-size: 12px;
+            border-top: 1px solid rgba(99, 102, 241, 0.08);
+        }
+
+        .footer a { color: #6366f1; text-decoration: none; }
+
+        @media (max-width: 640px) {
+            .hero h2 { font-size: 26px; }
+            .hero p { font-size: 15px; }
+            .features { grid-template-columns: 1fr; padding: 0 10px; }
+            .header { padding: 15px 16px; }
+            .header-brand h1 { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="header-brand">
+            <span class="logo">🚀</span>
+            <h1>FileToLink Bot</h1>
+        </a>
+        <a href="https://t.me/{{ bot_username }}" class="header-btn" target="_blank">🤖 Open Bot</a>
+    </div>
+
+    <div class="hero">
+        <div class="hero-icon">📁</div>
+        <h2>File to Link — Instantly</h2>
+        <p>Send any file to our Telegram bot and get direct download & streaming links. Fast, free, and unlimited.</p>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="icon">⚡</div>
+                <h3>Lightning Fast</h3>
+                <p>Get links instantly. No waiting, no upload delays.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🎬</div>
+                <h3>Stream Online</h3>
+                <p>Watch videos & listen to audio directly in browser.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">📦</div>
+                <h3>Batch Support</h3>
+                <p>Send multiple files and get a single batch link.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🔒</div>
+                <h3>Secure Links</h3>
+                <p>Signed URLs with optional auto-delete protection.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🌐</div>
+                <h3>Cloudflare CDN</h3>
+                <p>Optional CF Worker proxy for faster global delivery.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🤖</div>
+                <h3>Clone Bot</h3>
+                <p>Create your own clone with /clone command.</p>
+            </div>
+        </div>
+
+        <div class="cta-buttons">
+            <a href="https://t.me/{{ bot_username }}" class="cta-btn primary" target="_blank">
+                <span>🤖</span> Start Bot
+            </a>
+            <a href="https://github.com/Shubhamxd82/FileToLinkBot" class="cta-btn secondary" target="_blank">
+                <span>⭐</span> GitHub
+            </a>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span class="status-dot"></span>
+        <span>Server Online — All Systems Operational</span>
+    </div>
+
+    <div class="footer">
+        <p>© 2025 FileToLink Bot | Powered by Pyrogram + aiohttp</p>
+    </div>
+</body>
+</html>
