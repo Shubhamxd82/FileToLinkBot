@@ -39,7 +39,7 @@ class Config:
     FQDN = os.environ.get("FQDN", "")
     HAS_SSL = os.environ.get("HAS_SSL", "True").lower() == "true"
     URL_PREFIX = "https" if HAS_SSL else "http"
-    BASE_URL = f"{URL_PREFIX}://{FQDN}" if FQDN else ""
+    BASE_URL = os.environ.get("BASE_URL", "") or (f"{URL_PREFIX}://{FQDN}" if FQDN else "")
 
     # Cloudflare
     CF_ENABLED = os.environ.get("CF_ENABLED", "False").lower() == "true"
