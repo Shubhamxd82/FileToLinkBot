@@ -198,14 +198,25 @@ class StreamServer:
                 logger.error(f"Message not found: {fd['message_id']}")
                 return resp
 
+            # Convert byte offset to 1MB chunk number (Telegram expects chunk index, not bytes)
+            chunk_size = 1024 * 1024
+            first_chunk = offset // chunk_size   # chunk index to start streaming from
+            skip_bytes = offset % chunk_size     # bytes to skip at the start of first chunk
+
             bytes_sent = 0
             bytes_to_send = content_length
+            is_first_chunk = True
 
-            async for chunk in self.bot.stream_media(msg, offset=offset):
+            async for chunk in self.bot.stream_media(msg, offset=first_chunk):
                 if bytes_sent >= bytes_to_send:
                     break
 
-                # Trim last chunk if it exceeds needed bytes
+                # Discard leading bytes in first chunk that are before the requested offset
+                if is_first_chunk and skip_bytes:
+                    chunk = chunk[skip_bytes:]
+                    is_first_chunk = False
+
+                # Trim last chunk if it exceeds the requested byte range
                 remaining = bytes_to_send - bytes_sent
                 if len(chunk) > remaining:
                     chunk = chunk[:remaining]
