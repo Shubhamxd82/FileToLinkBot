@@ -1,13 +1,18 @@
-import base64, hashlib, hmac
+import base64
+import hashlib
+import hmac
 from config import Config
 from database.settings_db import get_settings
+
 
 class LinkGenerator:
     SECRET = Config.CF_SECRET_KEY or "default-secret"
 
     @classmethod
     def _sign(cls, data):
-        return hmac.new(cls.SECRET.encode(), data.encode(), hashlib.sha256).hexdigest()[:16]
+        return hmac.new(
+            cls.SECRET.encode(), data.encode(), hashlib.sha256
+        ).hexdigest()[:16]
 
     @classmethod
     def encode_file_uuid(cls, file_uuid):
@@ -26,7 +31,7 @@ class LinkGenerator:
                 encoded += "=" * pad
             uuid = base64.urlsafe_b64decode(encoded).decode()
             return uuid if cls._sign(uuid) == sig else None
-        except:
+        except Exception:
             return None
 
     @classmethod
@@ -52,13 +57,13 @@ class LinkGenerator:
         s = await get_settings()
         t = cls.encode_file_uuid(file_uuid)
         if s.get("cf_enabled") and s.get("cf_worker_url"):
-            return f"{s['cf_worker_url']}/stream/{t}"
-        return f"{Config.BASE_URL}/stream/{t}"
+            return f"{s['cf_worker_url']}/watch/{t}"
+        return f"{Config.BASE_URL}/watch/{t}"
 
     @classmethod
     async def generate_download_link(cls, file_uuid):
         s = await get_settings()
         t = cls.encode_file_uuid(file_uuid)
         if s.get("cf_enabled") and s.get("cf_worker_url"):
-            return f"{s['cf_worker_url']}/dl/{t}"
-        return f"{Config.BASE_URL}/dl/{t}"
+            return f"{s['cf_worker_url']}/download/{t}"
+        return f"{Config.BASE_URL}/download/{t}"
