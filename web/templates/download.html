@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ file_name }} — Download</title>
+    <meta property="og:title" content="Download {{ file_name }}">
+    <meta property="og:description" content="Size: {{ file_size }} | Type: {{ mime_type }}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            width: 100%;
+            padding: 15px 24px;
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .brand .logo { font-size: 24px; }
+
+        .brand h1 {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav { display: flex; gap: 10px; }
+
+        .nav-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn.home {
+            background: rgba(99, 102, 241, 0.12);
+            color: #8b8cf8;
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
+
+        .nav-btn.home:hover { background: rgba(99, 102, 241, 0.25); }
+
+        .nav-btn.stream {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+            color: #fff;
+        }
+
+        .nav-btn.stream:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .main {
+            width: 100%;
+            max-width: 640px;
+            padding: 32px 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dl-card {
+            width: 100%;
+            background: rgba(20, 20, 50, 0.8);
+            border-radius: 18px;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+
+        .icon-section {
+            padding: 36px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.08));
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .file-icon { font-size: 72px; margin-bottom: 14px; display: block; }
+
+        .file-name-lg {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            word-break: break-word;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 14px;
+            background: rgba(99, 102, 241, 0.18);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 20px;
+            font-size: 11px;
+            color: #8b8cf8;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .details { padding: 20px; }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            background: rgba(99, 102, 241, 0.04);
+            transition: background 0.2s;
+        }
+
+        .detail-row:hover { background: rgba(99, 102, 241, 0.1); }
+
+        .d-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #7a7aa0;
+            font-size: 13px;
+        }
+
+        .d-label .ic { font-size: 16px; }
+
+        .d-value {
+            color: #e0e0f0;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: right;
+            word-break: break-all;
+            max-width: 55%;
+        }
+
+        .dl-section {
+            padding: 20px;
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .dl-btn {
+            width: 100%;
+            padding: 15px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            border: none;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            box-shadow: 0 6px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .dl-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 35px rgba(99, 102, 241, 0.5);
+        }
+
+        .sec-actions { display: flex; gap: 10px; }
+
+        .sec-btn {
+            flex: 1;
+            padding: 11px 14px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .sec-btn.watch {
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.25);
+        }
+
+        .sec-btn.watch:hover { background: rgba(139, 92, 246, 0.22); }
+
+        .sec-btn.copy {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .sec-btn.copy:hover { background: rgba(16, 185, 129, 0.22); }
+
+        .sec-btn.share {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        .sec-btn.share:hover { background: rgba(59, 130, 246, 0.22); }
+
+        .note {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .note .nic { font-size: 16px; margin-top: 1px; }
+
+        .note .ntxt {
+            font-size: 12px;
+            color: #6a6a90;
+            line-height: 1.5;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(16, 185, 129, 0.95);
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .footer {
+            width: 100%;
+            padding: 16px;
+            text-align: center;
+            color: #4a4a70;
+            font-size: 12px;
+            border-top: 1px solid rgba(99, 102, 241, 0.08);
+            margin-top: auto;
+        }
+
+        .footer a { color: #6366f1; text-decoration: none; }
+
+        @media (max-width: 640px) {
+            .header { padding: 12px 14px; }
+            .brand h1 { font-size: 14px; }
+            .nav-btn { padding: 6px 10px; font-size: 12px; }
+            .main { padding: 18px 10px; }
+            .icon-section { padding: 28px 18px; }
+            .file-icon { font-size: 56px; }
+            .file-name-lg { font-size: 16px; }
+            .details { padding: 14px; }
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                padding: 10px 12px;
+            }
+            .d-value { max-width: 100%; text-align: left; }
+            .dl-section { padding: 14px; }
+            .sec-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="brand">
+            <span class="logo">🚀</span>
+            <h1>FileToLink Bot</h1>
+        </a>
+        <div class="nav">
+            <a href="/" class="nav-btn home">🏠 Home</a>
+            {% if can_stream %}
+            <a href="/watch/{{ token }}" class="nav-btn stream">▶️ Stream</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="dl-card">
+            <div class="icon-section">
+                <span class="file-icon">{{ file_emoji }}</span>
+                <div class="file-name-lg">{{ file_name }}</div>
+                <span class="badge">{{ file_extension }}</span>
+            </div>
+
+            <div class="details">
+                <div class="detail-row">
+                    <span class="d-label"><span class="ic">💾</span> File Size</span>
+                    <span class="d-value">{{ file_size }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="d-label"><span class="ic">📝</span> MIME Type</span>
+                    <span class="d-value">{{ mime_type }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="d-label"><span class="ic">📂</span> Category</span>
+                    <span class="d-value">{{ file_type }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="d-label"><span class="ic">👁️</span> Downloads</span>
+                    <span class="d-value">{{ access_count }}</span>
+                </div>
+            </div>
+
+            <div class="dl-section">
+                <a href="{{ download_url }}" class="dl-btn">
+                    <span>⬇️</span> Download File ({{ file_size }})
+                </a>
+
+                <div class="sec-actions">
+                    {% if can_stream %}
+                    <a href="/watch/{{ token }}" class="sec-btn watch">
+                        <span>▶️</span> Stream
+                    </a>
+                    {% endif %}
+                    <button class="sec-btn copy" onclick="copyLink()">
+                        <span>📋</span> Copy
+                    </button>
+                    <button class="sec-btn share" onclick="shareFile()">
+                        <span>📤</span> Share
+                    </button>
+                </div>
+
+                <div class="note">
+                    <span class="nic">💡</span>
+                    <span class="ntxt">
+                        Click download to save the file. If it doesn't start, right-click and select "Save link as...". This link is permanent and can be shared.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">✅ Link copied!</div>
+
+    <div class="footer">
+        <p>⚡ <a href="https://t.me/{{ bot_username }}" target="_blank">FileToLink Bot</a> — Fast & Free</p>
+    </div>
+
+    <script>
+        function copyLink() {
+            var url = window.location.origin + "{{ download_url }}";
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(function() { showToast("✅ Link copied!"); });
+            } else {
+                var t = document.createElement("textarea");
+                t.value = url;
+                t.style.position = "fixed";
+                t.style.opacity = "0";
+                document.body.appendChild(t);
+                t.select();
+                document.execCommand("copy");
+                document.body.removeChild(t);
+                showToast("✅ Link copied!");
+            }
+        }
+
+        function shareFile() {
+            if (navigator.share) {
+                navigator.share({
+                    title: "{{ file_name }}",
+                    text: "Download {{ file_name }} ({{ file_size }})",
+                    url: window.location.href
+                });
+            } else {
+                copyLink();
+            }
+        }
+
+        function showToast(msg) {
+            var el = document.getElementById("toast");
+            el.textContent = msg || "✅ Done!";
+            el.classList.add("show");
+            setTimeout(function() { el.classList.remove("show"); }, 2000);
+        }
+    </script>
+</body>
+</html>
