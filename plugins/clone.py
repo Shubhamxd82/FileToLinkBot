@@ -26,10 +26,10 @@ async def clone_cmd(client, message):
 
 @Client.on_message(filters.command("myclones") & filters.private)
 async def myclones(client, message):
-    clones = get_user_clones(message.from_user.id)
+    clones = await get_user_clones(message.from_user.id)
     text = "**Your Clones:**\n"
     n = 0
-    async for c in clones:
+    for c in clones:
         n += 1
         text += f"{n}. @{c['bot_username']}\n"
     if n == 0:
@@ -42,9 +42,9 @@ async def clone_info(client, cb):
     await cb.message.edit(f"**Clone Bot**\nTotal: {t}\nUse /clone BOT_TOKEN", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data="back_start")]]))
 
 async def start_all_clones():
-    clones = get_all_clones()
+    clones = await get_all_clones()
     n = 0
-    async for c in clones:
+    for c in clones:
         try:
             cl = Client(f"clone_{c['bot_username']}", c.get("api_id") or Config.API_ID, c.get("api_hash") or Config.API_HASH, bot_token=c["bot_token"], in_memory=True, plugins=dict(root="plugins"))
             await cl.start()
